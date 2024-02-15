@@ -29,6 +29,9 @@ Before running the application, configure the following:
 1. Database connection:
 - If required, spin up a docker container with a large database, recommended to use this:
 https://hub.docker.com/repository/docker/andrespedes/mysql-large-sample-db/general
+
+![docker-image](images/docker-image.png)
+
 - Edit the `src/main/resources/application.properties` file to include your database connection properties (URL, user, password).
 2. Output CSV file path:
 - Edit the property for file path `destination.file.path` .
