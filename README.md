@@ -87,4 +87,4 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 - **Andres Cespedes Morales**
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the Apache 2.0 License; see the [tab](https://github.com/pedes/mule-stream-db-large-resultset?tab=Apache-2.0-1-ov-file) for details.
