@@ -39,6 +39,7 @@ https://hub.docker.com/repository/docker/andrespedes/mysql-large-sample-db/gener
 > In order to enable Streaming in MySQL this has to be enabled at the connection level. In the Database Config element, this:
 > 
 > More info:
+> ![connection](images/connection-property.png)
 > 
 > https://dev.mysql.com/doc/connector-j/en/connector-j-reference-implementation-notes.html
 > 
@@ -57,6 +58,8 @@ To use the application, simply run it from Anypoint Studio:
 - Non-repeatable stream gives the best performance, useful in many cases.
 - The app doesn't need more than 200-300Mb of RAM/Heap to process large amounts of data.
 - Streaming configuration depends on the Database Engine, MySQL and Microsoft SQL Server are the ones that require more specialized config.
+
+![memory](images/memory.png)
 
 ```
 wc -l result.csv
