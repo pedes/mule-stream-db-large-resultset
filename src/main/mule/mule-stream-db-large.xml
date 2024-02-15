@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:sap="http://www.mulesoft.org/schema/mule/sap" xmlns:java="http://www.mulesoft.org/schema/mule/java"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd
+http://www.mulesoft.org/schema/mule/sap http://www.mulesoft.org/schema/mule/sap/current/mule-sap.xsd">
+
+	<flow name="db-stream-large-db-to-csv" doc:id="9236a8ec-c78f-43a5-9a55-c5100a6c7adf">
+		<http:listener doc:name="GET /db-large-stream-csv" doc:id="72384380-cb2e-4e0c-8c82-fe095500b46d" config-ref="HTTP_Listener_config" path="/db-large-stream-csv" allowedMethods="GET"/>
+		<logger level="INFO" doc:name="Log starting time before stream" doc:id="35a4842c-c6f3-4b05-be00-3a3250c4331b" message='#["fetching a stream from a MySQL DB Resultset"]' />
+		<db:select doc:name="Select large dataset as non repeatable stream" doc:id="ee8722d6-081c-4e51-a62c-8a4161cc11f2" config-ref="Database_Config" fetchSize="10000" >
+			<non-repeatable-iterable />
+			<db:sql><![CDATA[SELECT * FROM employees.salaries;]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform stream structure" doc:id="50de9775-36a5-42e8-ab5a-cea96d08ba0f">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+//@StreamCapable()
+//input payload application/csv
+//output application/csv
+output application/csv deferred=true
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="Append stream content into CSV" doc:id="4272793d-f152-4b5d-b5f2-ac1257cf7029" path="${destination.file.path}" mode="APPEND" />
+		<logger level="INFO" doc:name="Logger" doc:id="0aae5aed-1e4f-4dad-9879-446bffc12d07" message='#["Processed the stream as a CSV file"]' />
+		<ee:transform doc:name="create HTTP JSON response" doc:id="19bd6c27-6d9d-49da-9a02-cca36dc453f6">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message" : "streamed!"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="on-table-row-scheduler-streamed" doc:id="cfd6a599-afad-4acf-b2d7-31cdd7d5a522" initialState="stopped">
+		<db:listener doc:name="On Table Row" doc:id="7f45cef0-93bc-435d-8d0a-0caa481066ea" config-ref="Database_Config" table="salaries" watermarkColumn="salary" idColumn="salary" fetchSize="500">
+			<scheduling-strategy>
+				<fixed-frequency frequency="1" timeUnit="MINUTES" />
+			</scheduling-strategy>
+		</db:listener>
+		<ee:transform doc:name="Transform Message" doc:id="844b1bc9-e651-4e4f-a15d-ffb553fe6423">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/csv
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="Write" doc:id="740bf688-6466-4303-beba-7fb2b2b5352c" path="/Users/andrespedesmorales/Desktop/streaming/result.csv" mode="APPEND" />
+	</flow>
+	<flow name="batch-job-streamed-db" doc:id="ff0db991-d3fb-4252-8ae8-26accc580d64" >
+		<http:listener doc:name="Listener" doc:id="eab75e17-514f-42b9-8876-fb78af872fcd" config-ref="HTTP_Listener_config" path="/dbstream"/>
+		<db:select doc:name="Select" doc:id="581636ba-e8ec-49ac-b59e-dce77fb944f0" config-ref="Database_Config" fetchSize="100">
+			<ee:repeatable-file-store-iterable inMemoryObjects="100" />
+			<db:sql ><![CDATA[SELECT * FROM sakila.address;]]></db:sql>
+		</db:select>
+		<batch:job jobName="db-streamBatch_Job" doc:id="6d92099e-cd5d-48c7-b3fd-c1e1ade69ec7" >
+			<batch:process-records >
+				<batch:step name="Batch_Step" doc:id="70c565fa-7b92-43de-b6bf-e68e94583b93" >
+					<ee:transform doc:name="Transform Message" doc:id="1e56f6ab-6ef4-4543-b557-70e992248822">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+					<logger level="INFO" doc:name="Logger" doc:id="bbaf76c3-b3b7-499b-86d5-d59e8139b6aa" message="#[sizeOf(payload)]" />
+				</batch:step>
+			</batch:process-records>
+		</batch:job>
+	</flow>
+</mule>
