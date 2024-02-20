@@ -28,7 +28,7 @@ Before running the application, configure the following:
 
 1. Database connection:
 - If required, spin up a docker container with a large database, recommended to use this:
-https://hub.docker.com/repository/docker/andrespedes/mysql-large-sample-db/general
+https://hub.docker.com/r/andrespedes/mysql-large-sample-db
 
 ![docker-image](images/docker-image.png)
 
